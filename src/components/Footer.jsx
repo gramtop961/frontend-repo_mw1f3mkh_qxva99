@@ -1,6 +1,44 @@
+import { useMemo, useState } from 'react';
 import { Mail, MapPin, Phone, Heart } from 'lucide-react';
 
 export default function Footer() {
+  const backendUrl = useMemo(() => import.meta.env.VITE_BACKEND_URL, []);
+  const [mini, setMini] = useState({ name: '', email: '' });
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const submitMini = async (e) => {
+    e.preventDefault();
+    if (!backendUrl) {
+      alert('Backend URL not configured');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${backendUrl}/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: mini.name || 'Website Lead',
+          email: mini.email || 'lead@example.com',
+          phone: 'N/A',
+          department: 'General',
+          date: null,
+          notes: 'Quick footer request'
+        })
+      });
+      if (!res.ok) throw new Error('Failed');
+      setSent(true);
+      setMini({ name: '', email: '' });
+      setTimeout(() => setSent(false), 2000);
+    } catch (err) {
+      console.error(err);
+      alert('Unable to submit. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <footer id="contact" className="relative border-t border-neutral-200 bg-white">
       <div className="absolute inset-x-0 -top-10 h-10 bg-gradient-to-b from-orange-50 to-transparent" />
@@ -44,10 +82,10 @@ export default function Footer() {
 
           <div id="book">
             <h4 className="text-sm font-semibold text-neutral-900">Book Appointment</h4>
-            <form className="mt-4 space-y-3" onSubmit={(e) => e.preventDefault()}>
-              <input className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Your name" />
-              <input type="email" className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Email" />
-              <button className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-orange-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-95">Request Slot</button>
+            <form className="mt-4 space-y-3" onSubmit={submitMini}>
+              <input value={mini.name} onChange={(e)=>setMini(s=>({...s,name:e.target.value}))} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Your name" required />
+              <input value={mini.email} onChange={(e)=>setMini(s=>({...s,email:e.target.value}))} type="email" className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Email" required />
+              <button disabled={loading} className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-orange-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60">{loading ? 'Sending…' : sent ? 'Requested ✓' : 'Request Slot'}</button>
               <p className="text-xs text-neutral-500">By proceeding you agree to our privacy policy.</p>
             </form>
           </div>

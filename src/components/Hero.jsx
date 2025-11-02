@@ -1,9 +1,60 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Spline from '@splinetool/react-spline';
 import { Calendar, Mail, Phone } from 'lucide-react';
 
 export default function Hero() {
   const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    department: '',
+    date: '',
+    notes: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const backendUrl = useMemo(() => import.meta.env.VITE_BACKEND_URL, []);
+
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!backendUrl) {
+      alert('Backend URL not configured');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${backendUrl}/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          department: form.department || 'General',
+          date: form.date || null,
+          notes: form.notes || ''
+        })
+      });
+      if (!res.ok) throw new Error('Failed to submit appointment');
+      setSubmitted(true);
+      setForm({ name: '', email: '', phone: '', department: '', date: '', notes: '' });
+      setTimeout(() => {
+        setOpen(false);
+        setSubmitted(false);
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      alert('Unable to submit. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <section className="relative min-h-[88vh] w-full overflow-hidden bg-white" id="home">
@@ -67,20 +118,20 @@ export default function Hero() {
                 Close
               </button>
             </div>
-            <form className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
-              <input className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Full name" required />
-              <input type="email" className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Email" required />
-              <input type="tel" className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Phone" required />
-              <select className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" defaultValue="">
+            <form className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2" onSubmit={onSubmit}>
+              <input name="name" value={form.name} onChange={onChange} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Full name" required />
+              <input name="email" type="email" value={form.email} onChange={onChange} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Email" required />
+              <input name="phone" type="tel" value={form.phone} onChange={onChange} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" placeholder="Phone" required />
+              <select name="department" value={form.department} onChange={onChange} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500" required>
                 <option value="" disabled>Department</option>
                 <option>Doctor Consultation</option>
                 <option>Pharmacy</option>
                 <option>Lab & Diagnostics</option>
               </select>
-              <input type="date" className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 sm:col-span-2" />
-              <textarea rows={4} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 sm:col-span-2" placeholder="Additional notes" />
-              <button type="submit" className="sm:col-span-2 inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-orange-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-95">
-                Submit Request
+              <input name="date" type="date" value={form.date} onChange={onChange} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 sm:col-span-2" />
+              <textarea name="notes" value={form.notes} onChange={onChange} rows={4} className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-500 sm:col-span-2" placeholder="Additional notes" />
+              <button type="submit" disabled={submitting} className="sm:col-span-2 inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-orange-600 to-pink-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60">
+                {submitting ? 'Submitting…' : submitted ? 'Request Sent ✓' : 'Submit Request'}
               </button>
             </form>
           </div>
